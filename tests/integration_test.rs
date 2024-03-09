@@ -288,17 +288,29 @@ fn test_class_name() {
         frames,
         [
             "<module>",
+            // regular functions
             "normal_function",
             "normal_function_with_arg",
             "normal_function_with_non_arg_local_called_self",
             "normal_function_with_non_arg_local_called_cls",
-            "object.normal_function_with_a_confusing_self_arg", // first arg confused with self - room for improvement
-            "object.normal_function_with_a_confusing_cls_arg", // first arg confused with cls - room for improvement
-            "SomeClass.class_method",                          // correctly recognised class
-            "class_method_confusing_first_arg", // class arg name doesn't follow the convention - not recognised
-            "SomeClass.normal_method",          // correctly recognised class instance
-            "normal_method_confusing_first_arg", // self arg name doesn't follow the convention - not recognised
+            // first arg confused with an actual self arg - room for improvement
+            "object.normal_function_with_a_confusing_self_arg",
+            // first arg confused with cls - room for improvement
+            "object.normal_function_with_a_confusing_cls_arg",
+            // correctly recognised class (typical case)
+            "SomeClass.class_method",
+            // class arg name doesn't follow the convention - not recognised
+            "class_method_confusing_first_arg",
+            // correctly recognised class instance  (typical case)
+            "SomeClass.normal_method",
+            // self arg name doesn't follow the convention - not recognised
+            "normal_method_confusing_first_arg",
         ]
+    );
+
+    assert!(
+        trace.frames.iter().all(|f| f.locals.is_none()),
+        "`--class-name` shouldn't imply `--locals`"
     );
 }
 
@@ -405,7 +417,6 @@ fn test_local_vars_and_class_name() {
     assert_eq!(fn_frame.name, "ClassName.local_variable_lookup");
 
     let locals = fn_frame.locals.as_ref().unwrap();
-
     assert_eq!(locals[0].name, "self");
     assert_eq!(locals[0].arg, true);
     assert!(locals[0]
