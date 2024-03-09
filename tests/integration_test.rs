@@ -258,6 +258,51 @@ fn test_cyrillic() {
 }
 
 #[test]
+fn test_class_name() {
+    #[cfg(target_os = "macos")]
+    {
+        // We need root permissions here to run this on OSX
+        if unsafe { libc::geteuid() } != 0 {
+            return;
+        }
+    }
+
+    let config = Config {
+        include_class_name: true,
+        ..Default::default()
+    };
+
+    let mut runner = TestRunner::new(config, "./tests/scripts/class_name.py");
+    let traces = runner.spy.get_stack_traces().unwrap();
+    assert_eq!(traces.len(), 1);
+    let trace = &traces[0];
+
+    let frames: Vec<&str> = trace
+        .frames
+        .iter()
+        .rev()
+        .map(|frame| frame.name.as_ref())
+        .collect();
+
+    assert_eq!(
+        frames,
+        [
+            "<module>",
+            "normal_function",
+            "normal_function_with_arg",
+            "normal_function_with_non_arg_local_called_self",
+            "normal_function_with_non_arg_local_called_cls",
+            "object.normal_function_with_a_confusing_self_arg", // first arg confused with self - room for improvement
+            "object.normal_function_with_a_confusing_cls_arg", // first arg confused with cls - room for improvement
+            "SomeClass.class_method",                          // correctly recognised class
+            "class_method_confusing_first_arg", // class arg name doesn't follow the convention - not recognised
+            "SomeClass.normal_method",          // correctly recognised class instance
+            "normal_method_confusing_first_arg", // self arg name doesn't follow the convention - not recognised
+        ]
+    );
+}
+
+#[test]
 fn test_local_vars() {
     #[cfg(target_os = "macos")]
     {
@@ -333,6 +378,57 @@ fn test_local_vars() {
             Some("{\"a\": False, \"b\": (1, 2, 3)}".to_owned())
         );
     }
+}
+
+#[test]
+fn test_local_vars_and_class_name() {
+    #[cfg(target_os = "macos")]
+    {
+        // We need root permissions here to run this on OSX
+        if unsafe { libc::geteuid() } != 0 {
+            return;
+        }
+    }
+
+    let config = Config {
+        dump_locals: 1,
+        include_class_name: true,
+        ..Default::default()
+    };
+    let mut runner = TestRunner::new(config, "./tests/scripts/local_vars_and_class_name.py");
+    let traces = runner.spy.get_stack_traces().unwrap();
+    assert_eq!(traces.len(), 1);
+    let trace = &traces[0];
+    assert_eq!(trace.frames.len(), 2);
+
+    let fn_frame = &trace.frames[0];
+    assert_eq!(fn_frame.name, "ClassName.local_variable_lookup");
+
+    let locals = fn_frame.locals.as_ref().unwrap();
+
+    assert_eq!(locals[0].name, "self");
+    assert_eq!(locals[0].arg, true);
+    assert!(locals[0]
+        .repr
+        .as_ref()
+        .expect("class repr should be given")
+        .starts_with("<ClassName at 0x"));
+
+    let remaining_locals: Vec<(&str, bool, Option<&str>)> = locals
+        .iter()
+        .skip(1)
+        .map(|local| (local.name.as_ref(), local.arg, local.repr.as_deref()))
+        .collect();
+
+    assert_eq!(
+        remaining_locals,
+        [
+            ("arg1", true, Some("\"foo\"",),),
+            ("local1", false, Some("\"a\"",),),
+            ("local2", false, Some("2.71828",),),
+            ("local3", false, Some("{}",),),
+        ]
+    );
 }
 
 #[cfg(not(target_os = "freebsd"))]
