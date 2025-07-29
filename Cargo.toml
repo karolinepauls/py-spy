@@ -44,6 +44,7 @@ remoteprocess = "0.5.1"
 chrono = "0.4.26"
 
 [dev-dependencies]
+criterion = "0.7.0"
 py-spy-testdata = "0.1.0"
 
 [target.'cfg(unix)'.dependencies]

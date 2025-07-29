@@ -2,13 +2,13 @@ extern crate py_spy;
 use py_spy::{Config, Pid, PythonSpy};
 use std::collections::HashSet;
 
-struct ScriptRunner {
+pub struct ScriptRunner {
     #[allow(dead_code)]
-    child: std::process::Child,
+    pub child: std::process::Child,
 }
 
 impl ScriptRunner {
-    fn new(process_name: &str, filename: &str) -> ScriptRunner {
+    pub fn new(process_name: &str, filename: &str) -> ScriptRunner {
         let child = std::process::Command::new(process_name)
             .arg(filename)
             .spawn()
@@ -16,7 +16,7 @@ impl ScriptRunner {
         ScriptRunner { child }
     }
 
-    fn id(&self) -> Pid {
+    pub fn id(&self) -> Pid {
         self.child.id() as _
     }
 }
@@ -29,14 +29,14 @@ impl Drop for ScriptRunner {
     }
 }
 
-struct TestRunner {
+pub struct TestRunner {
     #[allow(dead_code)]
-    child: ScriptRunner,
-    spy: PythonSpy,
+    pub child: ScriptRunner,
+    pub spy: PythonSpy,
 }
 
 impl TestRunner {
-    fn new(config: Config, filename: &str) -> TestRunner {
+    pub fn new(config: Config, filename: &str) -> TestRunner {
         let child = ScriptRunner::new("python", filename);
         std::thread::sleep(std::time::Duration::from_millis(400));
         let spy = PythonSpy::retry_new(child.id(), &config, 20).unwrap();
